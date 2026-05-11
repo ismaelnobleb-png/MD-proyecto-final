@@ -76,7 +76,8 @@ class Perceptron:
         return self._sigmoid(np.dot(x, self.weights) + self.bias)
 
     def train(self, X: np.ndarray, y: np.ndarray) -> None:
-        """Entrena el perceptrón con los datos X (n_samples × n_features) e y (n_samples,)."""
+        ###    Entrena el perceptrón con los datos X (n_samples × n_features) e y (n_samples,).
+
         self.loss_history.clear()
 
         for epoch in range(self.epochs):
@@ -95,14 +96,18 @@ class Perceptron:
             self.loss_history.append(epoch_loss / len(y))
 
     def predict_proba(self, x: np.ndarray) -> float:
-        """Devuelve la probabilidad de que el correo sea spam."""
+        ###    Devuelve la probabilidad de que el correo sea spam.
+
         return self._forward(x)
 
     def predict(self, x: np.ndarray, threshold: float = 0.5) -> int:
-        """Devuelve 1 (spam) o 0 (legítimo)."""
+        ###    Devuelve 1 (spam) o 0 (legítimo).
+
         return int(self.predict_proba(x) >= threshold)
 
     def accuracy(self, X: np.ndarray, y: np.ndarray) -> float:
+        ###    Calcula la precisión de la predicción.
+
         preds = [self.predict(x) for x in X]
         return np.mean(np.array(preds) == y)
 
@@ -114,6 +119,7 @@ def main():
     model.train(X, y)
 
     acc = model.accuracy(X, y)
+
     print(f"\n{'='*60}")
     print(f"  PERCEPTRÓN ANTI-SPAM — RESULTADOS")
     print(f"{'='*60}")
