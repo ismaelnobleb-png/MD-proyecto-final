@@ -1,9 +1,7 @@
 import numpy as np
 import re
 
-# ─────────────────────────────────────────────
-#  DATASET DE CORREOS
-# ─────────────────────────────────────────────
+
 
 EMAILS = [
     {"sender": "Banco Nacional",    "from": "noreply@banconacional.com.co", "subject": "Tu estado de cuenta de abril está listo",           "body": "Hola, tu extracto mensual ya está disponible. Ingresa a tu banca en línea para consultarlo.", "label": 0},
@@ -111,15 +109,12 @@ class Perceptron:
         return np.mean(np.array(preds) == y)
 
 def main():
-    # 1. Construir dataset
     X = np.array([extract_features(e) for e in EMAILS])
     y = np.array([e["label"] for e in EMAILS])
 
-    # 2. Entrenar
     model = Perceptron(n_features=X.shape[1], learning_rate=0.1, epochs=50)
     model.train(X, y)
 
-    # 3. Evaluar
     acc = model.accuracy(X, y)
     print(f"\n{'='*60}")
     print(f"  PERCEPTRÓN ANTI-SPAM — RESULTADOS")
@@ -127,7 +122,6 @@ def main():
     print(f"  Épocas: {model.epochs}  |  η: {model.lr}  |  Precisión: {acc*100:.0f}%")
     print(f"{'='*60}\n")
 
-    # 4. Clasificar cada correo
     print(f"  {'REMITENTE':<22}  {'RESULTADO':<12}  {'PROB.':<8}  {'REAL'}")
     print(f"  {'-'*22}  {'-'*12}  {'-'*8}  {'-'*10}")
 
@@ -140,29 +134,6 @@ def main():
         correct  = "✓" if pred == email["label"] else "✗"
         print(f"  {email['sender'][:22]:<22}  {verdict:<12}  {prob*100:>5.1f}%   {real} {correct}")
 
-    # 5. Pesos aprendidos
-    print(f"\n  PESOS APRENDIDOS:")
-    for name, w in zip(FEATURE_NAMES, model.weights):
-        bar = "█" * int(abs(w) * 20)
-        sign = "+" if w >= 0 else "-"
-        print(f"    {sign}{bar:<20}  {w:+.4f}  {name}")
-    print(f"    bias: {model.bias:+.4f}\n")
-
-    # 6. Clasificar un correo nuevo
-    nuevo = {
-        "sender": "Lotería Nacional",
-        "from":   "loteria@gana-facil.xyz",
-        "subject":"GANASTE el sorteo especial — RESPONDE AHORA",
-        "body":   "Has sido elegido ganador. Envía tus datos bancarios para recibir $5.000.000 gratis. Oferta expira hoy.",
-    }
-    feats_nuevo = extract_features(nuevo)
-    prob_nuevo  = model.predict_proba(feats_nuevo)
-    pred_nuevo  = model.predict(feats_nuevo)
-    print(f"{'='*60}")
-    print(f"  CORREO NUEVO:")
-    print(f"    Asunto : {nuevo['subject']}")
-    print(f"    Veredicto: {'SPAM' if pred_nuevo else 'Legítimo'} (probabilidad: {prob_nuevo*100:.1f}%)")
-    print(f"{'='*60}\n")
 
 if __name__ == "__main__":
     main()
