@@ -60,19 +60,8 @@ def extract_features(email: dict) -> np.ndarray:
     return np.array([caps_ratio, excl_count, urgent_score, money_score,
                      susp_domain, legit_score, long_subject, unknown_dom])
 
-# ─────────────────────────────────────────────
-#  PERCEPTRÓN
-# ─────────────────────────────────────────────
 
 class Perceptron:
-    """
-    Perceptrón de una sola capa con función de activación sigmoide.
-
-    Regla de aprendizaje (descenso de gradiente estocástico):
-        error  = y_real - ŷ
-        wᵢ    += η · error · xᵢ
-        bias  += η · error
-    """
 
     def __init__(self, n_features: int, learning_rate: float = 0.1, epochs: int = 50):
         self.lr      = learning_rate
