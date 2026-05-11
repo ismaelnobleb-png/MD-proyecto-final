@@ -86,11 +86,9 @@ class Perceptron:
                 pred  = self._forward(xi)
                 error = yi - pred
 
-                # actualización de pesos
                 self.weights += self.lr * error * xi
                 self.bias    += self.lr * error
 
-                # log-loss (entropía cruzada binaria)
                 epoch_loss += -(yi * np.log(pred + 1e-9) +
                                 (1 - yi) * np.log(1 - pred + 1e-9))
 
