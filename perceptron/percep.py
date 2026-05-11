@@ -1,8 +1,3 @@
-"""
-Perceptrón para clasificación de spam en correos electrónicos
-Implementación desde cero con NumPy
-"""
-
 import numpy as np
 import re
 
@@ -22,10 +17,6 @@ EMAILS = [
     {"sender": "Spotify",           "from": "no-reply@spotify.com",         "subject": "Tu resumen musical de la semana está aquí",         "body": "Descubre tus artistas más escuchados esta semana y crea una playlist personalizada.", "label": 0},
     {"sender": "INVERSIONES",       "from": "profits@invest-now.xyz",       "subject": "Duplica tu dinero en 48 horas — Método SECRETO",    "body": "Inversión garantizada. Miles de clientes satisfechos. Mínimo $100.000 COP. No pierdas esta oportunidad ÚNICA.", "label": 1},
 ]
-
-# ─────────────────────────────────────────────
-#  EXTRACCIÓN DE CARACTERÍSTICAS (features)
-# ─────────────────────────────────────────────
 
 URGENT_WORDS = ["urgente","ya","hoy","ahora","expira","limitada","gratis","gana","ganaste",
                 "garantizado","secreto","único","clic","click","reclama","actúa","perderás","aproveche"]
@@ -53,9 +44,6 @@ FEATURE_NAMES = [
 ]
 
 def extract_features(email: dict) -> np.ndarray:
-    """
-    Convierte un correo en un vector de 8 características numéricas [0, 1].
-    """
     text_lower = (email["subject"] + " " + email["body"] + " " + email["sender"]).lower()
     text_raw   =  email["subject"] + " " + email["body"]
     sender_email = email.get("from", "")
@@ -133,10 +121,6 @@ class Perceptron:
         preds = [self.predict(x) for x in X]
         return np.mean(np.array(preds) == y)
 
-# ─────────────────────────────────────────────
-#  PIPELINE PRINCIPAL
-# ─────────────────────────────────────────────
-
 def main():
     # 1. Construir dataset
     X = np.array([extract_features(e) for e in EMAILS])
@@ -162,7 +146,7 @@ def main():
         features = extract_features(email)
         prob     = model.predict_proba(features)
         pred     = model.predict(features)
-        verdict  = "🚫 SPAM" if pred == 1 else "✅ Legítimo"
+        verdict  = "SPAM" if pred == 1 else "Legítimo"
         real     = "spam"   if email["label"] == 1 else "legítimo"
         correct  = "✓" if pred == email["label"] else "✗"
         print(f"  {email['sender'][:22]:<22}  {verdict:<12}  {prob*100:>5.1f}%   {real} {correct}")
@@ -188,7 +172,7 @@ def main():
     print(f"{'='*60}")
     print(f"  CORREO NUEVO:")
     print(f"    Asunto : {nuevo['subject']}")
-    print(f"    Veredicto: {'🚫 SPAM' if pred_nuevo else '✅ Legítimo'} (probabilidad: {prob_nuevo*100:.1f}%)")
+    print(f"    Veredicto: {'SPAM' if pred_nuevo else 'Legítimo'} (probabilidad: {prob_nuevo*100:.1f}%)")
     print(f"{'='*60}\n")
 
 if __name__ == "__main__":
