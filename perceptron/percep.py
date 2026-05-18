@@ -1,142 +1,253 @@
+import os
+import csv
 import numpy as np
 import re
 
-
-
-EMAILS = [
-    {"sender": "Banco Nacional",    "from": "noreply@banconacional.com.co", "subject": "Tu estado de cuenta de abril está listo",           "body": "Hola, tu extracto mensual ya está disponible. Ingresa a tu banca en línea para consultarlo.", "label": 0},
-    {"sender": "OFERTA URGENTE!!!", "from": "promo@gana-millones.xyz",      "subject": "¡¡¡GANASTE $50,000,000 GRATIS!!! RECLAMA YA",       "body": "Felicitaciones! Has sido seleccionado. Haz clic AHORA para reclamar tu premio. Oferta expira HOY.", "label": 1},
-    {"sender": "Carlos Martínez",   "from": "c.martinez@empresa.co",        "subject": "Reunión de equipo mañana a las 9am",                 "body": "Hola equipo, confirmen asistencia para la reunión de planeación del trimestre. Gracias.", "label": 0},
-    {"sender": "FARMACIA DESC.",    "from": "ventas@pharmapills.net",       "subject": "Compra Viagra, Cialis SIN RECETA — 90% descuento",   "body": "Medicamentos de marca sin fórmula médica. Envío discreto. Paga con crypto.", "label": 1},
-    {"sender": "GitHub",            "from": "noreply@github.com",           "subject": "[PR #42] Feature: dark mode implementado",          "body": "rodrigo_dev abrió un pull request en tu repositorio. Revisa los cambios propuestos.", "label": 0},
-    {"sender": "BITCOIN GRATIS $$$","from": "cryptoking@free-crypto.io",    "subject": "Gana 0.5 BTC hoy GRATIS sin inversión!",            "body": "Sistema automático de multiplicación de criptomonedas. Solo necesitas tu wallet. URGENTE actúa hoy.", "label": 1},
-    {"sender": "Ana Sofía López",   "from": "a.lopez@universidad.edu",      "subject": "Re: Entrega del proyecto de machine learning",      "body": "Hola, adjunto la versión final del informe. Quedé muy contenta con los resultados del perceptrón.", "label": 0},
-    {"sender": "HERBAL SLIM PRO",   "from": "slim@dietpills-best.biz",      "subject": "Pierde 20 KILOS en 1 semana garantizado",           "body": "Pastillas naturales milagrosas. Oferta limitada. Compra 2 lleva 5 GRATIS.", "label": 1},
-    {"sender": "Spotify",           "from": "no-reply@spotify.com",         "subject": "Tu resumen musical de la semana está aquí",         "body": "Descubre tus artistas más escuchados esta semana y crea una playlist personalizada.", "label": 0},
-    {"sender": "INVERSIONES",       "from": "profits@invest-now.xyz",       "subject": "Duplica tu dinero en 48 horas — Método SECRETO",    "body": "Inversión garantizada. Miles de clientes satisfechos. Mínimo $100.000 COP. No pierdas esta oportunidad ÚNICA.", "label": 1},
+# Listas de palabras clave para la extracción de características (Features)
+URGENT_WORDS = [
+    "urgente",
+    "ya",
+    "hoy",
+    "ahora",
+    "expira",
+    "limitada",
+    "gratis",
+    "gana",
+    "ganaste",
+    "garantizado",
+    "secreto",
+    "único",
+    "clic",
+    "click",
+    "reclama",
+    "actúa",
+    "perderás",
+    "aproveche",
 ]
 
-URGENT_WORDS = ["urgente","ya","hoy","ahora","expira","limitada","gratis","gana","ganaste",
-                "garantizado","secreto","único","clic","click","reclama","actúa","perderás","aproveche"]
-
-MONEY_WORDS  = ["dinero","pesos","bitcoin","btc","crypto","inversión","premio","millones",
-                "descuento","oferta","gratis","gana","ganaste","duplica","profits"]
-
-LEGIT_WORDS  = ["reunión","proyecto","informe","equipo","estado","extracto","repositorio",
-                "pull","request","resumen","playlist","trimestre","asistencia","planeación"]
-
-SUSPICIOUS_DOMAINS = [".xyz",".biz",".io","free-","crypto","slim","pills","invest","gana","promo"]
-
-KNOWN_DOMAINS = ["gmail.com","empresa.co","universidad.edu","github.com",
-                 "spotify.com","banconacional.com.co"]
-
-FEATURE_NAMES = [
-    "Palabras en MAYÚSCULAS",
-    "Signos de exclamación",
-    "Palabras urgentes",
-    "Palabras de dinero/premio",
-    "Links/dominio sospechoso",
-    "Palabras legítimas",
-    "Asunto muy largo (>50 chars)",
-    "Dominio desconocido",
+MONEY_WORDS = [
+    "dinero",
+    "pesos",
+    "bitcoin",
+    "btc",
+    "crypto",
+    "inversión",
+    "premio",
+    "millones",
+    "descuento",
+    "oferta",
+    "gratis",
+    "gana",
+    "ganaste",
+    "duplica",
+    "profits",
 ]
 
-def extract_features(email: dict) -> np.ndarray:
-    text_lower = (email["subject"] + " " + email["body"] + " " + email["sender"]).lower()
-    text_raw   =  email["subject"] + " " + email["body"]
-    sender_email = email.get("from", "")
+LEGIT_WORDS = [
+    "reunión",
+    "proyecto",
+    "informe",
+    "equipo",
+    "estado",
+    "extracto",
+    "repositorio",
+    "pull",
+    "request",
+    "resumen",
+    "playlist",
+    "trimestre",
+    "asistencia",
+    "planeación",
+]
 
-    caps_ratio   = min(len(re.findall(r'[A-ZÁÉÍÓÚÑÜ]{2,}', text_raw)) / 3, 1.0)
-    excl_count   = min(text_raw.count("!") / 4, 1.0)
+SUSPICIOUS_DOMAINS = [
+    ".xyz",
+    ".biz",
+    ".io",
+    "free-",
+    "crypto",
+    "slim",
+    "pills",
+    "invest",
+    "gana",
+    "promo",
+]
+
+KNOWN_DOMAINS = [
+    "gmail.com",
+    "empresa.co",
+    "universidad.edu",
+    "github.com",
+    "spotify.com",
+    "banconacional.com.co",
+]
+
+
+# Función para normalizar y extraer el vector de características de cada correo
+def extract_features(email):
+    # Pasamos a minúsculas para evitar problemas de case-sensitivity
+    text_lower = (
+        email["subject"] + " " + email["body"] + " " + email["sender"]
+    ).lower()
+    text_raw = email["subject"] + " " + email["body"]
+    sender_email = email["from"]
+
+    # 1. Ratio de palabras en mayúsculas (indicador de gritos/spam)
+    caps_ratio = min(
+        len(re.findall(r"[A-ZÁÉÍÓÚÑÜ]{2,}", text_raw)) / 3, 1.0
+    )
+
+    # 2. Conteo de signos de exclamación
+    excl_count = min(text_raw.count("!") / 4, 1.0)
+
+    # 3. Frecuencia de palabras urgentes
     urgent_score = min(sum(w in text_lower for w in URGENT_WORDS) / 4, 1.0)
-    money_score  = min(sum(w in text_lower for w in MONEY_WORDS)  / 4, 1.0)
-    susp_domain  = min(sum(s in sender_email for s in SUSPICIOUS_DOMAINS) / 2, 1.0)
-    legit_score  = min(sum(w in text_lower for w in LEGIT_WORDS)  / 3, 1.0)
+
+    # 4. Frecuencia de palabras de dinero
+    money_score = min(sum(w in text_lower for w in MONEY_WORDS) / 4, 1.0)
+
+    # 5. Si el dominio del remitente está en la lista negra
+    susp_domain = min(
+        sum(s in sender_email for s in SUSPICIOUS_DOMAINS) / 2, 1.0
+    )
+
+    # 6. Frecuencia de palabras legítimas laborales/estudiantiles
+    legit_score = min(sum(w in text_lower for w in LEGIT_WORDS) / 3, 1.0)
+
+    # 7. Bandera binaria: asunto excesivamente largo
     long_subject = float(len(email["subject"]) > 50)
-    unknown_dom  = float(not any(d in sender_email for d in KNOWN_DOMAINS))
 
-    return np.array([caps_ratio, excl_count, urgent_score, money_score,
-                     susp_domain, legit_score, long_subject, unknown_dom])
+    # 8. Bandera binaria: si el dominio no pertenece a los conocidos
+    unknown_dom = float(not any(d in sender_email for d in KNOWN_DOMAINS))
+
+    # Retornamos el vector representativo mapeado
+    return np.array(
+        [
+            caps_ratio,
+            excl_count,
+            urgent_score,
+            money_score,
+            susp_domain,
+            legit_score,
+            long_subject,
+            unknown_dom,
+        ]
+    )
 
 
+# Implementación de la neurona artificial (Perceptrón con Sigmoide / Regresión Logística)
 class Perceptron:
 
-    def __init__(self, n_features: int, learning_rate: float = 0.1, epochs: int = 50):
-        self.lr      = learning_rate
-        self.epochs  = epochs
+    def __init__(self, n_features, learning_rate=0.1, epochs=50):
+        self.lr = learning_rate
+        self.epochs = epochs
+        # Inicializamos pesos en cero y el sesgo (bias)
         self.weights = np.zeros(n_features)
-        self.bias    = 0.0
-        self.loss_history: list[float] = []
+        self.bias = 0.0
+        self.loss_history = []
 
-    @staticmethod
-    def _sigmoid(z: float) -> float:
+    def _sigmoid(self, z):
+        # Función de activación para mapear a probabilidades [0, 1]
         return 1.0 / (1.0 + np.exp(-z))
 
-    def _forward(self, x: np.ndarray) -> float:
+    def _forward(self, x):
+        # Combinación lineal combinada con la activación
         return self._sigmoid(np.dot(x, self.weights) + self.bias)
 
-    def train(self, X: np.ndarray, y: np.ndarray) -> None:
-        ###    Entrena el perceptrón con los datos X (n_samples × n_features) e y (n_samples,).
-
-        self.loss_history.clear()
-
+    def train(self, X, y):
         for epoch in range(self.epochs):
             epoch_loss = 0.0
 
             for xi, yi in zip(X, y):
-                pred  = self._forward(xi)
+                pred = self._forward(xi)
                 error = yi - pred
 
+                # Gradiente descendente estocástico para actualizar parámetros
                 self.weights += self.lr * error * xi
-                self.bias    += self.lr * error
+                self.bias += self.lr * error
 
-                epoch_loss += -(yi * np.log(pred + 1e-9) +
-                                (1 - yi) * np.log(1 - pred + 1e-9))
+                # Entropía cruzada binaria (Binary Cross-Entropy Loss)
+                # Sumamos 1e-9 para evitar indeterminaciones matemáticas por log(0)
+                epoch_loss += -(
+                    yi * np.log(pred + 1e-9)
+                    + (1 - yi) * np.log(1 - pred + 1e-9)
+                )
 
             self.loss_history.append(epoch_loss / len(y))
 
-    def predict_proba(self, x: np.ndarray) -> float:
-        ###    Devuelve la probabilidad de que el correo sea spam.
-
+    def predict_proba(self, x):
         return self._forward(x)
 
-    def predict(self, x: np.ndarray, threshold: float = 0.5) -> int:
-        ###    Devuelve 1 (spam) o 0 (legítimo).
+    def predict(self, x, threshold=0.5):
+        # Clasificación binaria dura basada en el umbral
+        if self.predict_proba(x) >= threshold:
+            return 1
+        else:
+            return 0
 
-        return int(self.predict_proba(x) >= threshold)
+    def accuracy(self, X, y):
+        # Evaluación del desempeño del modelo
+        preds = np.array([self.predict(xi) for xi in X])
+        return np.mean(preds == y)
 
-    def accuracy(self, X: np.ndarray, y: np.ndarray) -> float:
-        ###    Calcula la precisión de la predicción.
 
-        preds = [self.predict(x) for x in X]
-        return np.mean(np.array(preds) == y)
+# Función para cargar el dataset desde el archivo CSV
+def load_data(file_path):
+    emails_list = []
+    with open(file_path, mode="r", encoding="utf-8") as file:
+        reader = csv.DictReader(file)
+        for row in reader:
+            # Casteamos el label a entero ya que el CSV lee strings
+            row["label"] = int(row["label"])
+            emails_list.append(row)
+    return emails_list
 
+
+# Hilo principal de ejecución
 def main():
-    X = np.array([extract_features(e) for e in EMAILS])
-    y = np.array([e["label"] for e in EMAILS])
+    # Detectamos la carpeta exacta donde está guardado este script (percep.py)
+    script_dir = os.path.dirname(os.path.abspath(__file__))
 
-    model = Perceptron(n_features=X.shape[1], learning_rate=0.1, epochs=50)
-    model.train(X, y)
+    # Unimos esa ruta con el nombre del archivo para generar la ruta absoluta perfecta
+    path_csv = os.path.join(script_dir, "correos.csv")
 
-    acc = model.accuracy(X, y)
+    emails_dataset = load_data(path_csv)
 
-    print(f"\n{'='*60}")
-    print(f"  PERCEPTRÓN ANTI-SPAM — RESULTADOS")
-    print(f"{'='*60}")
-    print(f"  Épocas: {model.epochs}  |  η: {model.lr}  |  Precisión: {acc*100:.0f}%")
-    print(f"{'='*60}\n")
+    # El resto de tu función main se queda exactamente igual...
+    X = np.array([extract_features(e) for e in emails_dataset])
+    y = np.array([e["label"] for e in emails_dataset])
 
-    print(f"  {'REMITENTE':<22}  {'RESULTADO':<12}  {'PROB.':<8}  {'REAL'}")
-    print(f"  {'-'*22}  {'-'*12}  {'-'*8}  {'-'*10}")
+    num_features = X.shape[1]
+    modelo = Perceptron(
+        n_features=num_features, learning_rate=0.1, epochs=50
+    )
 
-    for email in EMAILS:
-        features = extract_features(email)
-        prob     = model.predict_proba(features)
-        pred     = model.predict(features)
-        verdict  = "SPAM" if pred == 1 else "Legítimo"
-        real     = "spam"   if email["label"] == 1 else "legítimo"
-        correct  = "✓" if pred == email["label"] else "✗"
-        print(f"  {email['sender'][:22]:<22}  {verdict:<12}  {prob*100:>5.1f}%   {real} {correct}")
+    modelo.train(X, y)
+    exactitud = modelo.accuracy(X, y)
+
+    print("============================================================")
+    print(f" PERCEPTRÓN CLASIFICADOR - DATASET: {path_csv}")
+    print("============================================================")
+    print(
+        f" Parámetros -> Épocas: {modelo.epochs} | LR: {modelo.lr} | Accuracy: {exactitud*100:.2f}%"
+    )
+    print("============================================================\n")
+
+    print(f"{'REMITENTE':<22} {'PREDICCIÓN':<12} {'PROB. SPAM':<12} {'REAL'}")
+    print("-" * 60)
+
+    for email in emails_dataset:
+        feat = extract_features(email)
+        prob = modelo.predict_proba(feat)
+        pred = modelo.predict(feat)
+
+        txt_pred = "SPAM" if pred == 1 else "OK (Limpio)"
+        txt_real = "spam" if email["label"] == 1 else "legitimo"
+        check = "✓" if pred == email["label"] else "✗"
+
+        print(
+            f"{email['sender'][:20]:<22} {txt_pred:<12} {prob*100:>8.2f}%    {txt_real} {check}"
+        )
 
 
 if __name__ == "__main__":
