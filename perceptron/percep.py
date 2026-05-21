@@ -7,9 +7,7 @@ from tkinter import ttk, messagebox, scrolledtext
 import threading
 import math
 
-# ============================================================
-#  LISTAS DE PALABRAS CLAVE
-# ============================================================
+#  PALABRAS CLAVE
 URGENT_WORDS = [
     "urgente", "ya", "hoy", "ahora", "expira", "limitada", "gratis",
     "gana", "ganaste", "garantizado", "secreto", "único", "clic",
@@ -43,9 +41,7 @@ FEAT_NAMES = [
     "Dom. Sospechoso", "Palabras Legítimas", "Asunto Largo", "Dom. Desconocido"
 ]
 
-# ============================================================
-#  EXTRACCIÓN DE CARACTERÍSTICAS
-# ============================================================
+#  COMPARACIÓN PARA SACAR LAS CARACTERÍSTICAS
 def extract_features(email):
     text_lower = (email["subject"] + " " + email["body"] + " " + email["sender"]).lower()
     text_raw   = email["subject"] + " " + email["body"]
@@ -63,9 +59,7 @@ def extract_features(email):
     return np.array([caps_ratio, excl_count, urgent_score, money_score,
                      susp_domain, legit_score, long_subject, unknown_dom])
 
-# ============================================================
-#  PERCEPTRÓN (Regresión Logística con Gradiente Descendente)
-# ============================================================
+#  PERCEPTRÓN 
 class Perceptron:
     def __init__(self, n_features, learning_rate=0.1, epochs=50):
         self.lr = learning_rate
@@ -105,9 +99,7 @@ class Perceptron:
         preds = np.array([self.predict(xi, threshold) for xi in X])
         return np.mean(preds == y)
 
-# ============================================================
 #  CARGA DE DATOS
-# ============================================================
 def load_data(file_path):
     emails_list = []
     with open(file_path, mode="r", encoding="utf-8") as file:
@@ -117,15 +109,13 @@ def load_data(file_path):
             emails_list.append(row)
     return emails_list
 
-# ============================================================
-#  PALETA DE COLORES (estilo terminal oscuro)
-# ============================================================
+#  PALETA DE COLORES 
 BG       = "#0d0d0d"
 BG2      = "#111111"
 BG3      = "#1a1a1a"
-FG       = "#00ff88"       # verde principal
-FG2      = "#888888"       # gris texto secundario
-FG3      = "#cccccc"       # blanco suave
+FG       = "#00ff88"       
+FG2      = "#888888"       
+FG3      = "#cccccc"       
 ACCENT   = "#00cc6a"
 RED      = "#ff4444"
 ORANGE   = "#ff8844"
@@ -136,9 +126,7 @@ FONT_MONO_BIG = ("Courier New", 13, "bold")
 FONT_TITLE = ("Courier New", 16, "bold")
 FONT_LABEL = ("Courier New", 9)
 
-# ============================================================
 #  APLICACIÓN PRINCIPAL
-# ============================================================
 class SpamApp(tk.Tk):
 
     def __init__(self, csv_path):
@@ -158,7 +146,6 @@ class SpamApp(tk.Tk):
 
         self._build_ui()
 
-    # ----------------------------------------------------------
     def _load_dataset(self):
         try:
             self.emails = load_data(self.csv_path)
@@ -169,9 +156,7 @@ class SpamApp(tk.Tk):
             messagebox.showerror("Error", f"No se encontró el archivo:\n{self.csv_path}")
             self.destroy()
 
-    # ----------------------------------------------------------
     def _build_ui(self):
-        # ── Encabezado ──────────────────────────────────────────
         header = tk.Frame(self, bg=BG2, pady=8)
         header.pack(fill="x")
 
@@ -186,7 +171,6 @@ class SpamApp(tk.Tk):
         sep = tk.Frame(self, bg=FG, height=2)
         sep.pack(fill="x")
 
-        # ── Notebook (pestañas) ──────────────────────────────────
         style = ttk.Style(self)
         style.theme_use("default")
         style.configure("Dark.TNotebook",          background=BG,  borderwidth=0)
@@ -199,15 +183,13 @@ class SpamApp(tk.Tk):
         self.nb = ttk.Notebook(self, style="Dark.TNotebook")
         self.nb.pack(fill="both", expand=True, padx=0, pady=0)
 
-        # Pestañas
         self._build_tab_clasificar()
         self._build_tab_entrenar()
         self._build_tab_dataset()
         self._build_tab_consola()
 
-    # ══════════════════════════════════════════════════════════════
-    #  PESTAÑA 1 — CLASIFICAR
-    # ══════════════════════════════════════════════════════════════
+    #  PESTAÑA 1, CLASIFICACION DE CORREOS
+
     def _build_tab_clasificar(self):
         frame = tk.Frame(self.nb, bg=BG)
         self.nb.add(frame, text="[ Clasificar ]")
@@ -217,7 +199,6 @@ class SpamApp(tk.Tk):
         tk.Label(frame, text="// ingrese los datos del correo a analizar",
                  fg=FG2, bg=BG, font=FONT_LABEL).pack(anchor="w", padx=18, pady=(14, 2))
 
-        # Campos de entrada
         fields_frame = tk.Frame(frame, bg=BG)
         fields_frame.pack(fill="x", **pad)
 
@@ -244,13 +225,11 @@ class SpamApp(tk.Tk):
                                 highlightthickness=1, highlightcolor=FG, highlightbackground=BORDER)
         self.inp_body.grid(row=5, column=0, columnspan=2, sticky="ew", padx=6, pady=(0,4))
 
-        # Valores de ejemplo
         self.inp_sender.insert(0, "CryptoProfits Corp")
         self.inp_from.insert(0, "gana@free-crypto.xyz")
         self.inp_subject.insert(0, "¡GANASTE! Reclama YA tus 5 MILLONES de pesos GRATIS — URGENTE!!!")
         self.inp_body.insert("1.0", "Haz CLIC ahora y duplica tus Bitcoin en 24 horas. Oferta LIMITADA, expira hoy. Actúa ahora o perderás esta oportunidad única y garantizada de ganar millones.")
 
-        # Botón analizar
         btn_frame = tk.Frame(frame, bg=BG)
         btn_frame.pack(fill="x", padx=18, pady=4)
 
@@ -263,12 +242,10 @@ class SpamApp(tk.Tk):
         )
         self.btn_analizar.pack(fill="x")
 
-        # ── Panel de resultado ───────────────────────────────────
         res_frame = tk.Frame(frame, bg=BG2, bd=0,
                              highlightthickness=1, highlightbackground=BORDER)
         res_frame.pack(fill="both", expand=True, padx=18, pady=10)
 
-        # Veredicto
         top_res = tk.Frame(res_frame, bg=BG2)
         top_res.pack(fill="x", padx=14, pady=(12, 4))
 
@@ -280,7 +257,6 @@ class SpamApp(tk.Tk):
                                  font=("Courier New", 18, "bold"), anchor="e")
         self.lbl_prob.pack(side="right")
 
-        # Barra de probabilidad
         bar_frame = tk.Frame(res_frame, bg=BG2)
         bar_frame.pack(fill="x", padx=14, pady=(0, 8))
 
@@ -290,7 +266,6 @@ class SpamApp(tk.Tk):
                                     highlightthickness=0)
         self.canvas_bar.pack(fill="x", pady=3)
 
-        # Features
         tk.Label(res_frame, text="// vector de características (features):",
                  fg=FG2, bg=BG2, font=FONT_LABEL).pack(anchor="w", padx=14)
 
@@ -312,14 +287,11 @@ class SpamApp(tk.Tk):
             lv.pack(pady=(0, 5))
             self.feat_labels.append(lv)
 
-    # ══════════════════════════════════════════════════════════════
-    #  PESTAÑA 2 — ENTRENAMIENTO
-    # ══════════════════════════════════════════════════════════════
+    #  PESTAÑA 2, ENTRENAMIENTO
     def _build_tab_entrenar(self):
         frame = tk.Frame(self.nb, bg=BG)
         self.nb.add(frame, text="[ Entrenamiento ]")
 
-        # ── Parámetros ───────────────────────────────────────────
         tk.Label(frame, text="// configuración del modelo",
                  fg=FG2, bg=BG, font=FONT_LABEL).pack(anchor="w", padx=18, pady=(14, 4))
 
@@ -352,7 +324,6 @@ class SpamApp(tk.Tk):
         self.sl_thr    = make_slider(params_frame, "THRESHOLD",      10, 90, 50,  2,
                                      fmt=lambda v: f"{v/100:.2f}")
 
-        # Botón entrenar
         self.btn_train = tk.Button(
             frame, text="[ ENTRENAR MODELO ]",
             bg=BG, fg=FG, activebackground=FG, activeforeground=BG,
@@ -362,13 +333,11 @@ class SpamApp(tk.Tk):
         )
         self.btn_train.pack(fill="x", padx=18, pady=(10, 6))
 
-        # Log y gráfica lado a lado
         mid = tk.Frame(frame, bg=BG)
         mid.pack(fill="both", expand=True, padx=18, pady=4)
         mid.columnconfigure(0, weight=2)
         mid.columnconfigure(1, weight=3)
 
-        # Log de épocas
         tk.Label(mid, text="// log de entrenamiento", fg=FG2, bg=BG,
                  font=FONT_LABEL).grid(row=0, column=0, sticky="w", padx=(0,8))
         self.train_log = scrolledtext.ScrolledText(
@@ -379,7 +348,6 @@ class SpamApp(tk.Tk):
         self.train_log.grid(row=1, column=0, sticky="nsew", padx=(0, 8))
         self.train_log.configure(state="disabled")
 
-        # Gráfica de loss
         tk.Label(mid, text="// curva de pérdida (loss)", fg=FG2, bg=BG,
                  font=FONT_LABEL).grid(row=0, column=1, sticky="w")
         self.loss_canvas = tk.Canvas(mid, bg=BG2, bd=0, highlightthickness=1,
@@ -387,7 +355,6 @@ class SpamApp(tk.Tk):
         self.loss_canvas.grid(row=1, column=1, sticky="nsew")
         mid.rowconfigure(1, weight=1)
 
-        # Métricas
         metrics = tk.Frame(frame, bg=BG)
         metrics.pack(fill="x", padx=18, pady=(8, 6))
 
@@ -402,16 +369,13 @@ class SpamApp(tk.Tk):
                      font=("Courier New", 15, "bold")).pack(pady=(0,6))
             self.metric_vars[key] = v
 
-        # Pesos
         tk.Label(frame, text="// pesos aprendidos por la neurona",
                  fg=FG2, bg=BG, font=FONT_LABEL).pack(anchor="w", padx=18)
         self.weights_canvas = tk.Canvas(frame, height=120, bg=BG2, bd=0,
                                         highlightthickness=1, highlightbackground=BORDER)
         self.weights_canvas.pack(fill="x", padx=18, pady=(4, 10))
 
-    # ══════════════════════════════════════════════════════════════
-    #  PESTAÑA 3 — DATASET
-    # ══════════════════════════════════════════════════════════════
+    #  PESTAÑA 3, DATASET
     def _build_tab_dataset(self):
         frame = tk.Frame(self.nb, bg=BG)
         self.nb.add(frame, text="[ Dataset ]")
@@ -456,9 +420,7 @@ class SpamApp(tk.Tk):
 
         self._refresh_dataset_tab()
 
-    # ══════════════════════════════════════════════════════════════
-    #  PESTAÑA 4 — CONSOLA
-    # ══════════════════════════════════════════════════════════════
+    #  PESTAÑA 4, CONSOLA
     def _build_tab_consola(self):
         frame = tk.Frame(self.nb, bg=BG)
         self.nb.add(frame, text="[ Consola ]")
@@ -482,9 +444,7 @@ class SpamApp(tk.Tk):
         )
         btn_run.pack(fill="x", padx=18, pady=(0, 10))
 
-    # ══════════════════════════════════════════════════════════════
-    #  LÓGICA — ANALIZAR
-    # ══════════════════════════════════════════════════════════════
+    #  LÓGICA, ANALIZAR CORREO
     def _analizar(self):
         email = {
             "sender":  self.inp_sender.get().strip() or "Desconocido",
@@ -497,14 +457,12 @@ class SpamApp(tk.Tk):
         thr  = self.sl_thr.get() / 100
 
         if not np.any(self.modelo.weights):
-            # Si no se ha entrenado, usar pesos por defecto ilustrativos
             self.modelo.weights = np.array([0.8, 0.6, 1.2, 1.0, 0.9, -0.7, 0.3, 0.5])
             self.modelo.bias    = -1.2
 
         prob = self.modelo.predict_proba(feat)
         pred = 1 if prob >= thr else 0
 
-        # Veredicto
         if pred == 1:
             self.lbl_verdict.config(text="⚠  SPAM DETECTADO", fg=RED)
         else:
@@ -513,22 +471,18 @@ class SpamApp(tk.Tk):
         self.lbl_prob.config(text=f"{prob*100:.2f}%",
                              fg=RED if pred == 1 else FG)
 
-        # Barra de probabilidad
         self.canvas_bar.update_idletasks()
         w = self.canvas_bar.winfo_width()
         self.canvas_bar.delete("all")
         color = RED if prob > 0.5 else FG
         self.canvas_bar.create_rectangle(0, 0, int(w * prob), 12, fill=color, outline="")
 
-        # Features
         feat_colors = [RED if v > 0.5 else (ORANGE if v > 0.25 else FG)
                        for v in feat]
         for i, (v, lbl) in enumerate(zip(feat, self.feat_labels)):
             lbl.config(text=f"{v*100:.0f}%", fg=feat_colors[i])
 
-    # ══════════════════════════════════════════════════════════════
-    #  LÓGICA — ENTRENAR
-    # ══════════════════════════════════════════════════════════════
+    #  LÓGICA, ENTRENAMIENTO
     def _entrenar(self):
         epochs = int(self.sl_epochs.get())
         lr     = self.sl_lr.get() / 100
@@ -581,7 +535,6 @@ class SpamApp(tk.Tk):
         self._draw_weights()
         self._refresh_dataset_tab()
 
-    # ── Gráfica de pérdida ───────────────────────────────────────
     def _draw_loss(self, history):
         c = self.loss_canvas
         c.update_idletasks()
@@ -599,29 +552,24 @@ class SpamApp(tk.Tk):
             y = pad + (1 - (v - min_l) / rng) * (H - pad * 2)
             return x, y
 
-        # Ejes
         c.create_line(pad, pad, pad, H - pad, fill=BORDER)
         c.create_line(pad, H - pad, W - pad, H - pad, fill=BORDER)
 
-        # Etiquetas
         c.create_text(pad + 2, pad, text=f"{max_l:.3f}", fill=FG2,
                       font=("Courier New", 8), anchor="nw")
         c.create_text(pad + 2, H - pad, text=f"{min_l:.3f}", fill=FG2,
                       font=("Courier New", 8), anchor="sw")
 
-        # Curva
         pts = [px(i, v) for i, v in enumerate(history)]
         for i in range(len(pts) - 1):
             c.create_line(*pts[i], *pts[i+1], fill=FG, width=1.5)
 
-        # Área bajo la curva
         poly = []
         for p in pts:
             poly.extend(p)
         poly.extend([W - pad, H - pad, pad, H - pad])
         c.create_polygon(poly, fill="#003322", outline="")
 
-    # ── Barras de pesos ──────────────────────────────────────────
     def _draw_weights(self):
         c = self.weights_canvas
         c.update_idletasks()
@@ -649,9 +597,7 @@ class SpamApp(tk.Tk):
                           text=f"{w:.3f}", fill=color,
                           font=("Courier New", 8), anchor="w")
 
-    # ══════════════════════════════════════════════════════════════
-    #  DATASET TAB — REFRESH
-    # ══════════════════════════════════════════════════════════════
+    #  DATASET TAB
     def _refresh_dataset_tab(self):
         thr = self.sl_thr.get() / 100 if hasattr(self, "sl_thr") else 0.5
         for row in self.tree.get_children():
@@ -683,9 +629,7 @@ class SpamApp(tk.Tk):
                 tags=(tag,)
             )
 
-    # ══════════════════════════════════════════════════════════════
-    #  CONSOLA — REPORTE
-    # ══════════════════════════════════════════════════════════════
+    #  CONSOLA, REPORTE
     def _run_console(self):
         thr = self.sl_thr.get() / 100
         self.console.delete("1.0", "end")
@@ -719,9 +663,7 @@ class SpamApp(tk.Tk):
 
         self.console.insert("end", "\n".join(out))
 
-# ============================================================
-#  PUNTO DE ENTRADA
-# ============================================================
+#  ENTRADA
 def main():
     script_dir = os.path.dirname(os.path.abspath(__file__))
     path_csv   = os.path.join(script_dir, "correos.csv")
